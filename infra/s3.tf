@@ -1,6 +1,12 @@
 resource "aws_s3_bucket" "videos" {
   bucket = local.video_bucket_name
 
+  # Lets `terraform destroy` actually tear this down even if it isn't
+  # empty (e.g. lambda-builds/ deployment zips, test uploads) instead of
+  # failing partway through -- see infra/README.md's destroy-between-
+  # sessions cost note.
+  force_destroy = true
+
   tags = { Name = local.video_bucket_name }
 }
 

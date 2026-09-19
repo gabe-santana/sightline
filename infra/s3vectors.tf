@@ -14,6 +14,7 @@
 
 resource "aws_s3vectors_vector_bucket" "main" {
   vector_bucket_name = "${local.name}-vectors"
+  force_destroy      = true # same reasoning as aws_s3_bucket.videos in s3.tf
 
   encryption_configuration {
     sse_type = "AES256"

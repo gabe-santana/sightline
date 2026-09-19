@@ -1,10 +1,30 @@
+<div align="center">
+
 # Sightline
 
 **Turn thousands of hours of video into searchable, auditable compliance intelligence.**
 
+![AWS](https://img.shields.io/badge/Cloud-AWS-232F3E?logo=amazonaws&logoColor=white)
+![Terraform](https://img.shields.io/badge/IaC-Terraform-844FBA?logo=terraform&logoColor=white)
+![Next.js](https://img.shields.io/badge/Frontend-Next.js-000000?logo=next.js&logoColor=white)
+![Python](https://img.shields.io/badge/Lambda-Python%203.13-3776AB?logo=python&logoColor=white)
+![Event--driven](https://img.shields.io/badge/Architecture-Event--driven-informational)
+
+</div>
+
 Sightline is a cloud-native AI pipeline that ingests long-form video (advisory sessions, earnings calls, training and facility footage), transcribes and indexes it for semantic search, and exposes it to an autonomous query agent that answers natural-language compliance questions with strict, source-verified JSON — no loose prose, no unverifiable claims.
 
 It was designed in direct response to a real-world requirement from a financial-services risk & compliance organization (see [docs/proposal-apex-financial.md](docs/proposal-apex-financial.md)) that needed to replace weeks of manual video review with a system that is fast, cheap per asset, and defensible in an audit.
+
+## Contents
+
+- [What it does](#what-it-does)
+- [Architecture at a glance](#architecture-at-a-glance)
+- [Documentation](#documentation)
+- [Repository layout](#repository-layout)
+- [Tech stack](#tech-stack)
+- [Local development](#local-development)
+- [Status](#status)
 
 ## What it does
 
@@ -14,9 +34,17 @@ It was designed in direct response to a real-world requirement from a financial-
 - **Strict, auditable output** — every agent response is validated against a JSON schema with video IDs, timestamps, and confidence scores. No schema match, no answer.
 - **Predictable cost & reliability** — event-driven, serverless compute with retry/backoff and circuit breakers, so cost scales with actual usage instead of peak capacity.
 
-**Not yet implemented:** visual-frame sampling and on-screen analysis — see the scope note in [docs/architecture.md](docs/architecture.md). Today's pipeline is transcript-only, by design, to ship a fully working slice first.
+> **Not yet implemented:** visual-frame sampling and on-screen analysis — see the scope note in [docs/architecture.md](docs/architecture.md). Today's pipeline is transcript-only, by design, to ship a fully working slice first.
 
 ## Architecture at a glance
+
+<div align="center">
+
+![Sightline infrastructure diagram](docs/Infra.png)
+
+*Editable source: [docs/Infra.drawio](docs/Infra.drawio) (open with [diagrams.net](https://app.diagrams.net/))*
+
+</div>
 
 Four logical zones by responsibility, implemented as one VPC with tiered private subnets and Security Groups rather than five peered VPCs (see [infra/README.md](infra/README.md) for why):
 
@@ -41,7 +69,7 @@ Full breakdown, diagrams, and design rationale: [docs/architecture.md](docs/arch
 | [docs/evaluation-strategy.md](docs/evaluation-strategy.md) | How accuracy is measured and proven over time |
 | [docs/local-development.md](docs/local-development.md) | Running the whole pipeline locally with `docker-compose.yml` |
 | [docs/proposal-apex-financial.md](docs/proposal-apex-financial.md) | The end-to-end proposal this design responds to |
-| [docs/Infra.drawio](docs/Infra.drawio) | Source infrastructure diagram (draw.io) |
+| [docs/Infra.drawio](docs/Infra.drawio) | Editable source of the architecture diagram above (draw.io) |
 
 ## Repository layout
 
@@ -61,7 +89,17 @@ tests/                   Automated test suites
 
 ## Tech stack
 
-Python on AWS Lambda (plain zip packages, no container images) for the two ingestion jobs; Next.js (TypeScript) on AWS App Runner, publicly accessible directly on its own domain, for the analyst UI and the query agent's API routes; Amazon Bedrock for the agent's foundation model and embeddings; Amazon Transcribe for speech-to-text; Amazon S3 Vectors for vector/semantic search; Amazon RDS for structured metadata; Amazon S3 for asset storage; Amazon EventBridge as the event backbone. Deployed with Terraform (`infra/`) into a single VPC with tiered private subnets and no NAT Gateway -- see [infra/README.md](infra/README.md).
+| Layer | Technology |
+|---|---|
+| Ingestion compute | Python on AWS Lambda — plain zip packages, no container images |
+| Analyst UI + query agent | Next.js (TypeScript) on AWS App Runner, publicly accessible directly on its own domain |
+| Speech-to-text | Amazon Transcribe |
+| Foundation model + embeddings | Amazon Bedrock |
+| Semantic / vector search | Amazon S3 Vectors |
+| Structured metadata | Amazon RDS (Postgres) |
+| Asset storage | Amazon S3 |
+| Event backbone | Amazon EventBridge |
+| Infrastructure as code | Terraform — single VPC, tiered private subnets, no NAT Gateway (see [infra/README.md](infra/README.md)) |
 
 ## Local development
 

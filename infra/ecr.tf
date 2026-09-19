@@ -4,6 +4,7 @@
 resource "aws_ecr_repository" "app_service" {
   name                 = "${local.name}-app-service"
   image_tag_mutability = "MUTABLE"
+  force_delete         = true # same reasoning as aws_s3_bucket.videos in s3.tf
 
   image_scanning_configuration {
     scan_on_push = true
