@@ -1,0 +1,143 @@
+# Local emulation of the AWS resources in ../docs/architecture.md.
+# Run from anywhere with: docker compose -f docker/docker-compose.yml up -d --build
+#
+# | AWS resource (real)          | Local stand-in here                              |
+# |-------------------------------|---------------------------------------------------|
+# | Amazon S3, EventBridge, SQS   | localstack (real API, real behavior)              |
+# | Amazon RDS                    | postgres (RDS is just managed Postgres)           |
+# | Amazon OpenSearch Service     | opensearch (approximates Amazon S3 Vectors, the   |
+# |                                | real production semantic index -- no local        |
+# |                                | emulator exists for it)                           |
+# | Lambda: transcriber-job       | transcriber-worker running local_runner.py, which |
+# |                                | polls SQS and calls the same handler(event,       |
+# |                                | context) function the real Lambda would run       |
+# | Lambda: embedding-job         | embedding-worker running local_runner.py in a     |
+# |                                | loop, standing in for the transcript_ready event  |
+# |                                | trigger production uses                           |
+# | AWS App Runner (`app-service`)| not run here -- app-service is now real,          |
+# |                                | AWS-only code (Secrets Manager, S3 Vectors,       |
+# |                                | Bedrock, no local fallback) -- see the status     |
+# |                                | note in docs/local-development.md                 |
+# | Amazon Transcribe              | mock-transcribe (no official local emulator)      |
+# | Amazon Bedrock                 | mock-bedrock (no official local emulator)         |
+#
+# See ../docs/local-development.md for details and how to exercise the stack.
+
+services:
+  localstack:
+    image: localstack/localstack:3.8
+    environment:
+      - SERVICES=s3,sqs,events,sts,iam
+      - DEBUG=0
+    ports:
+      - "4566:4566"
+    volumes:
+      - ./localstack/init:/etc/localstack/init
+      - localstack-data:/var/lib/localstack
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=sightline
+      - POSTGRES_USER=sightline
+      - POSTGRES_PASSWORD=sightline
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sightline -d sightline"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  opensearch:
+    image: opensearchproject/opensearch:2.15.0
+    environment:
+      - discovery.type=single-node
+      - plugins.security.disabled=true
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  mock-transcribe:
+    build: ./mock-transcribe
+    ports:
+      - "8081:8080"
+
+  mock-bedrock:
+    build: ./mock-bedrock
+    ports:
+      - "8082:8080"
+
+  transcriber-worker:
+    build:
+      context: ..
+      dockerfile: src/transcriber-job/Dockerfile
+    environment: &worker-env
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_REGION: us-east-1
+      DATABASE_URL: postgresql://sightline:sightline@postgres:5432/sightline
+      BUCKET_NAME: sightline-videos
+      TRANSCRIBER_QUEUE_NAME: transcriber-job-queue
+      TRANSCRIBE_ENDPOINT: http://mock-transcribe:8080
+      BEDROCK_ENDPOINT: http://mock-bedrock:8080
+      OPENSEARCH_URL: http://opensearch:9200
+    depends_on:
+      localstack:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      mock-transcribe:
+        condition: service_started
+
+  embedding-worker:
+    build:
+      context: ..
+      dockerfile: src/embedding-job/Dockerfile
+    environment: *worker-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+      mock-bedrock:
+        condition: service_started
+
+  app-service:
+    build:
+      context: ..
+      dockerfile: src/app-service/Dockerfile
+    environment:
+      <<: *worker-env
+      S3_PUBLIC_ENDPOINT_URL: http://localhost:4566
+    ports:
+      - "8080:8080"
+    depends_on:
+      localstack:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+      mock-bedrock:
+        condition: service_started
+
+volumes:
+  localstack-data:
+  postgres-data:
+  opensearch-data:

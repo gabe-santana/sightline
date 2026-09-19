@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ComplianceQueryResponse",
+  "type": "object",
+  "required": ["query_id", "question", "findings", "evidence_complete"],
+  "properties": {
+    "query_id": { "type": "string" },
+    "question": { "type": "string" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["video_id", "timestamp_s", "claim", "confidence", "source"],
+        "properties": {
+          "video_id": { "type": "string" },
+          "timestamp_s": { "type": "number", "minimum": 0 },
+          "claim": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "source": {
+            "type": "string",
+            "enum": ["transcript"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "evidence_complete": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

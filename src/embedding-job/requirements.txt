@@ -1,0 +1,4 @@
+boto3==1.43.98
+psycopg2-binary==2.9.10
+requests==2.32.3
+opensearch-py==2.7.1

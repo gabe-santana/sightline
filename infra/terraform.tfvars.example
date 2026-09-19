@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars and adjust. Every variable has a sensible
+# default (see variables.tf) -- this file only needs to contain what
+# you're overriding.
+
+# aws_region   = "us-east-1"
+# environment  = "dev"
+
+# Must be globally unique across all of S3 if you want a specific name;
+# otherwise leave unset and Terraform derives one from your account ID.
+# video_bucket_name = "sightline-dev-videos-123456789012"
+
+# Once app-service's image has been pushed to the ECR repo this stack
+# creates (see the ecr_repository_url output):
+# app_service_image_repository_type = "ECR"
+# app_service_image_identifier      = "<ecr_repository_url>:latest"
+# app_service_port                  = "8080"
