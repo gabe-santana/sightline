@@ -10,6 +10,10 @@
 ![Python](https://img.shields.io/badge/Lambda-Python%203.13-3776AB?logo=python&logoColor=white)
 ![Event--driven](https://img.shields.io/badge/Architecture-Event--driven-informational)
 
+![Sightline infrastructure diagram](docs/res/img/infra.svg)
+
+*Editable source: [docs/Infra.drawio](docs/Infra.drawio) (open with [diagrams.net](https://app.diagrams.net/))*
+
 </div>
 
 Sightline is a cloud-native AI pipeline that ingests long-form video (advisory sessions, earnings calls, training and facility footage), transcribes and indexes it for semantic search, and exposes it to an autonomous query agent that answers natural-language compliance questions with strict, source-verified JSON — no loose prose, no unverifiable claims.
@@ -18,33 +22,15 @@ It was designed in direct response to a real-world requirement from a financial-
 
 ## Contents
 
-- [What it does](#what-it-does)
 - [Architecture at a glance](#architecture-at-a-glance)
+- [What it does](#what-it-does)
 - [Documentation](#documentation)
 - [Repository layout](#repository-layout)
 - [Tech stack](#tech-stack)
 - [Local development](#local-development)
 - [Status](#status)
 
-## What it does
-
-- **Event-driven ingestion** — an uploaded video triggers Amazon Transcribe (speaker-labeled, timestamped transcription); when the transcript is ready, it's automatically embedded and indexed — no polling anywhere in the chain.
-- **Semantic indexing** — transcript segments are embedded (Amazon Bedrock) and indexed in Amazon S3 Vectors with filterable metadata, alongside structured metadata in a relational store.
-- **Autonomous query agent** — decomposes multi-step natural-language questions ("find every mention of X, return timestamps") into a sequence of tool calls against the semantic index.
-- **Strict, auditable output** — every agent response is validated against a JSON schema with video IDs, timestamps, and confidence scores. No schema match, no answer.
-- **Predictable cost & reliability** — event-driven, serverless compute with retry/backoff and circuit breakers, so cost scales with actual usage instead of peak capacity.
-
-> **Not yet implemented:** visual-frame sampling and on-screen analysis — see the scope note in [docs/architecture.md](docs/architecture.md). Today's pipeline is transcript-only, by design, to ship a fully working slice first.
-
 ## Architecture at a glance
-
-<div align="center">
-
-![Sightline infrastructure diagram](docs/Infra.png)
-
-*Editable source: [docs/Infra.drawio](docs/Infra.drawio) (open with [diagrams.net](https://app.diagrams.net/))*
-
-</div>
 
 Four logical zones by responsibility, implemented as one VPC with tiered private subnets and Security Groups rather than five peered VPCs (see [infra/README.md](infra/README.md) for why):
 
@@ -56,6 +42,16 @@ Four logical zones by responsibility, implemented as one VPC with tiered private
 | Storage | System of record | Amazon S3, Amazon RDS, Amazon EventBridge |
 
 Full breakdown, diagrams, and design rationale: [docs/architecture.md](docs/architecture.md).
+
+## What it does
+
+- **Event-driven ingestion** — an uploaded video triggers Amazon Transcribe (speaker-labeled, timestamped transcription); when the transcript is ready, it's automatically embedded and indexed — no polling anywhere in the chain.
+- **Semantic indexing** — transcript segments are embedded (Amazon Bedrock) and indexed in Amazon S3 Vectors with filterable metadata, alongside structured metadata in a relational store.
+- **Autonomous query agent** — decomposes multi-step natural-language questions ("find every mention of X, return timestamps") into a sequence of tool calls against the semantic index.
+- **Strict, auditable output** — every agent response is validated against a JSON schema with video IDs, timestamps, and confidence scores. No schema match, no answer.
+- **Predictable cost & reliability** — event-driven, serverless compute with retry/backoff and circuit breakers, so cost scales with actual usage instead of peak capacity.
+
+> **Not yet implemented:** visual-frame sampling and on-screen analysis — see the scope note in [docs/architecture.md](docs/architecture.md). Today's pipeline is transcript-only, by design, to ship a fully working slice first.
 
 ## Documentation
 

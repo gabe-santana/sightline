@@ -105,6 +105,22 @@ resource "aws_vpc_endpoint" "transcribe" {
   tags = { Name = "${local.name}-transcribe" }
 }
 
+# transcriber-job's own code calls events:PutEvents directly (to publish
+# transcript_ready -- see handler.py's publish_transcript_ready) from
+# inside its vpc_config'd ENI in the jobs subnet, which has no NAT/IGW.
+# Without this endpoint that call has no path out and would fail with a
+# connection timeout in production.
+resource "aws_vpc_endpoint" "events" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.events"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.jobs[*].id
+  security_group_ids  = [aws_security_group.endpoints.id]
+  private_dns_enabled = true
+
+  tags = { Name = "${local.name}-events" }
+}
+
 resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
